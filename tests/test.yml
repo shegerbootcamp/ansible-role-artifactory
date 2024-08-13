@@ -1,0 +1,9 @@
+---
+- name: Test Artifactory role
+  hosts: rt
+  become: true
+  roles:
+    - ../ansible-role-artifactory
+  vars:
+    artifactory_install: true
+

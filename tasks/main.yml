@@ -1,0 +1,47 @@
+- name: Create JFrog Home directory
+  file:
+    path: /opt/jfrog
+    state: directory
+    mode: '0755'
+
+- name: Download Artifactory tar.gz file
+  get_url:
+    url: "https://releases.jfrog.io/artifactory/bintray-artifactory/org/artifactory/oss/jfrog-artifactory-oss/7.90.7/jfrog-artifactory-oss-7.90.7-linux.tar.gz"
+    dest: /tmp/jfrog-artifactory-oss-7.90.7-linux.tar.gz
+
+- name: Extract Artifactory tar.gz file
+  unarchive:
+    src: /tmp/jfrog-artifactory-oss-7.90.7-linux.tar.gz
+    dest: /opt/jfrog
+    remote_src: yes
+    extra_opts:
+      - --strip-components=1
+
+- name: Set JFROG_HOME environment variable
+  lineinfile:
+    path: /etc/environment
+    line: 'JFROG_HOME=/opt/jfrog'
+    create: yes
+
+- name: Verify existence of installService.sh script
+  stat:
+    path: /opt/jfrog/artifactory-7.90.7/app/bin/installService.sh
+  register: install_script
+
+- name: Install Artifactory as a service
+  command: /opt/jfrog/artifactory-7.90.7/app/bin/installService.sh
+  when: install_script.stat.exists
+  environment:
+    JFROG_HOME: /opt/jfrog
+
+- name: Start Artifactory service
+  service:
+    name: artifactory
+    state: started
+    enabled: yes
+  when: install_script.stat.exists
+
+- name: Report missing installService.sh script
+  fail:
+    msg: "The installService.sh script was not found in /opt/jfrog/artifactory-7.90.7/app/bin/"
+  when: not install_script.stat.exists
